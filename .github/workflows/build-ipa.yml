@@ -53,7 +53,7 @@ jobs:
           plutil -lint Payload/StealthPool.app/Info.plist
 
       - name: Real signing (optional)
-        if: ${{ secrets.IOS_CERT_P12 != "" }}
+        if: ${{ secrets.IOS_CERT_P12 }}
         env:
           CERT: ${{ secrets.IOS_CERT_P12 }}
           PASS: ${{ secrets.IOS_CERT_PASSWORD }}
