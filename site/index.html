@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stealth Pool iOS</title>
+<meta name="description" content="Stealth Pool para iPhone y iPad. Instalacion directa OTA, sin PC y con auto-update.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header>
+  <div class="logo">🎱 Stealth <span>Pool</span></div>
+  <nav><a href="#instalar">Instalar</a><a href="#faq">FAQ</a></nav>
+</header>
+<main>
+  <section class="hero">
+    <h1>Stealth Pool <span id="ver">v2.4.0</span></h1>
+    <p class="tagline">Overlay para 8 Ball Pool en iPhone y iPad. Instalacion directa desde el telefono.</p>
+    <a id="installBtn" class="btn" href="#">📲 Instalar en iPhone</a>
+    <p class="hint">iOS 13 o superior · iPhone / iPad · Sin jailbreak</p>
+  </section>
+  <section class="steps" id="instalar">
+    <h2>Como instalar</h2>
+    <ol>
+      <li>Pulsa el boton <b>Instalar en iPhone</b> desde Safari o Chrome.</li>
+      <li>iOS descargara un perfil de configuracion: acepta e instala.</li>
+      <li>Ve a <code>Ajustes → General → VPN y gestion de dispositivos</code>.</li>
+      <li>Toca el perfil de desarrollador y pulsa <b>Confiar</b>.</li>
+      <li>Si iOS te lo pide, <b>reinicia el telefono</b> y listo.</li>
+    </ol>
+  </section>
+  <section class="features">
+    <div class="card"><h3>🎯 Streamer mode</h3><p>HUD discreto que no aparece en tus directos ni capturas.</p></div>
+    <div class="card"><h3>🔄 Auto-update</h3><p>Cada build publica version nueva. La web siempre apunta a la ultima.</p></div>
+    <div class="card"><h3>⚡ Rapido</h3><p>Instalacion OTA con perfil de configuracion, igual que las apps de empresas.</p></div>
+  </section>
+  <section class="faq" id="faq">
+    <h2>Preguntas frecuentes</h2>
+    <details><summary>¿Necesito un PC?</summary><p>No. Todo se hace desde el propio iPhone.</p></details>
+    <details><summary>¿Necesito jailbreak?</summary><p>No. La instalacion usa firma OTA.</p></details>
+    <details><summary>¿Como me entero de las actualizaciones?</summary><p>Vuelve a esta web: veras la version actual arriba y podras reinstalar al momento.</p></details>
+  </section>
+</main>
+<footer><p>Stealth Pool v2 · <a href="https://github.com/xpeee-banned/Stealth-Pool-iOS">codigo fuente</a></p></footer>
+<script>
+(function () {
+  var manifest = "https://xpeee-banned.github.io/Stealth-Pool-iOS/manifest.plist";
+  document.getElementById("installBtn").href = "itms-services://?action=download-manifest&url=" + encodeURIComponent(manifest);
+  fetch("version.json").then(function (r) { return r.json(); }).then(function (v) {
+    var el = document.getElementById("ver");
+    if (el && v.version) el.textContent = "v" + v.version;
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>

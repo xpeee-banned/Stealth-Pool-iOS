@@ -1,0 +1,91 @@
+name: Build IPA and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: ver
+        run: |
+          echo "version=$(node scripts/version.js)" >> "$GITHUB_OUTPUT"
+          echo "build=$(node scripts/build.js)" >> "$GITHUB_OUTPUT"
+
+      - name: Download FridaGadget
+        run: |
+          curl -sL -o frida-gadget.dylib.gz https://github.com/frida/frida/releases/download/16.1.4/frida-gadget-16.1.4-ios-universal.dylib.gz
+          gunzip -f frida-gadget.dylib.gz
+          mkdir -p Payload/StealthPool.app artifacts
+
+      - name: Assemble app bundle
+        run: |
+          cp ios/Info.plist Payload/StealthPool.app/Info.plist
+          cp frida-gadget.dylib Payload/StealthPool.app/FridaGadget.dylib
+          cp ios/stealth_ios.js Payload/StealthPool.app/stealth_ios.js
+          cat > Payload/StealthPool.app/FridaGadget.config.json <<EOF
+          {
+            "interaction": {
+              "type": "script",
+              "path": "stealth_ios.js"
+            }
+          }
+          EOF
+          xcrun -sdk iphoneos clang -arch arm64 -fobjc-arc -framework Foundation ios/launcher.m -o Payload/StealthPool.app/StealthPool
+          plutil -replace CFBundleShortVersionString -string ${{ steps.ver.outputs.version }} Payload/StealthPool.app/Info.plist
+          plutil -replace CFBundleVersion -string ${{ steps.ver.outputs.build }} Payload/StealthPool.app/Info.plist
+          plutil -remove UILaunchStoryboardName Payload/StealthPool.app/Info.plist
+          codesign --force --deep --sign - Payload/StealthPool.app
+          plutil -lint Payload/StealthPool.app/Info.plist
+
+      - name: Real signing (optional)
+        if: ${{ secrets.IOS_CERT_P12 != "" }}
+        env:
+          CERT: ${{ secrets.IOS_CERT_P12 }}
+          PASS: ${{ secrets.IOS_CERT_PASSWORD }}
+          PROV: ${{ secrets.IOS_MOBILEPROVISION }}
+        run: |
+          echo "$CERT" | base64 -D > cert.p12
+          echo "$PROV" | base64 -D > profile.mobileprovision
+          IDENTITY=$(security find-identity -v -p codesigning | grep -m1 ")" | tr -s " " | cut -d " " -f 3)
+          cp profile.mobileprovision Payload/StealthPool.app/embedded.mobileprovision
+          security import cert.p12 -P "$PASS" -k "$HOME/Library/Keychains/login.keychain-db"
+          codesign -f -s "$IDENTITY" --entitlements ios/entitlements.plist Payload/StealthPool.app
+
+      - name: Package IPA
+        run: |
+          zip -qry artifacts/StealthPool-${{ steps.ver.outputs.version }}.ipa Payload
+          cp artifacts/StealthPool-${{ steps.ver.outputs.version }}.ipa site/StealthPool.ipa
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete v${{ steps.ver.outputs.version }} --yes --cleanup-tag || true
+          gh release create v${{ steps.ver.outputs.version }} artifacts/StealthPool-${{ steps.ver.outputs.version }}.ipa --generate-notes
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
