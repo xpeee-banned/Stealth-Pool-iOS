@@ -53,12 +53,15 @@ jobs:
           plutil -lint Payload/StealthPool.app/Info.plist
 
       - name: Real signing (optional)
-        if: ${{ secrets.IOS_CERT_P12 }}
         env:
           CERT: ${{ secrets.IOS_CERT_P12 }}
           PASS: ${{ secrets.IOS_CERT_PASSWORD }}
           PROV: ${{ secrets.IOS_MOBILEPROVISION }}
         run: |
+          if [ -z "$CERT" ]; then
+            echo "No IOS_CERT_P12 secret; keeping ad-hoc signature"
+            exit 0
+          fi
           echo "$CERT" | base64 -D > cert.p12
           echo "$PROV" | base64 -D > profile.mobileprovision
           IDENTITY=$(security find-identity -v -p codesigning | grep -m1 ")" | tr -s " " | cut -d " " -f 3)
